@@ -89,8 +89,8 @@ class DelugeHostCollection(object):
         if host.get_torrent_count() >= self.max_torrents:
             raise AllDelugeHostsInCollectionFullException()
 
-        logger.info('Adding {} to {}', torrent, host.display)
         host.add_torrent(torrent)
+        logger.success('Added {} to {}', torrent, host.display)
 
 
 class TorrentAlreadyPresentInCollectionException(Exception):

@@ -1,5 +1,5 @@
 from os import makedirs, remove
-from os.path import abspath, expandvars
+from os.path import abspath, basename, expandvars
 from pathlib import Path
 from sys import argv, stderr
 from time import sleep
@@ -7,6 +7,8 @@ from time import sleep
 from click import Choice as CHOICE, INT, Path as PATH, STRING, command, get_app_dir, option
 
 from loguru import logger
+
+from notifiers.logging import NotificationHandler
 
 from .deluge_host_collection import DelugeHostCollection, TorrentAlreadyPresentInCollectionException
 
@@ -57,39 +59,63 @@ def resolve_path(ctx,
                     case_sensitive=False),
         envvar='DELUGE_LOG_LEVEL',
         default='DEBUG')
-def main(config_path, watch_path, host_filter, max_torrents, sleep_time, log_level):
+@option('--slack-webhook',
+        type=STRING,
+        envvar='SLACK_WEBHOOK',
+        default=None)
+@option('--slack-username',
+        type=STRING,
+        envvar='SLACK_USERNAME',
+        default='Deluge Distributr')
+@option('--slack-format',
+        type=STRING,
+        envvar='SLACK_FORMAT',
+        default='{message}')
+def main(config_path, watch_path, host_filter, max_torrents, sleep_time, log_level, slack_webhook, slack_username, slack_format):
     """This script adds all torrents in a watch dir evenly to multiple deluge
     instances"""
     logger.remove()
     logger.add(stderr, level=log_level)
 
-    logger.info(argv[0])
+    if slack_webhook:
+        params = {
+            "username": slack_username,
+            "webhook_url": slack_webhook
+        }
+        slack = NotificationHandler("slack", defaults=params)
+        logger.add(slack, format=slack_format, level="SUCCESS")
+
+    logger.success(f'{basename(argv[0])} Started')
     logger.info('  --config-path "{}"', config_path)
     logger.info('  --watch-path "{}"', watch_path)
     logger.info('  --host-filter "{}"', host_filter)
     logger.info('  --max-torrents {}', max_torrents)
     logger.info('  --sleep-time {}', sleep_time)
     logger.info('  --log-level "{}"', log_level)
+    logger.info('  --slack-webhook "{}"', slack_webhook)
+    logger.info('  --slack-format "{}"', slack_format)
 
     while True:
+        logger.debug(f'Sleeping {sleep_time} seconds')
+        sleep(sleep_time)
+
         host = DelugeHostCollection(
             config_path=config_path,
             host_filter=host_filter,
             max_torrents=max_torrents)
-
         torrents = [
             torrent
             for torrent in Path(watch_path).rglob('*.torrent')
             if torrent.is_file()
         ]
-        logger.info("{} .torrent files found", len(torrents))
-        for torrent in torrents:
-            try:
-                host.add_torrent(torrent)
-            except TorrentAlreadyPresentInCollectionException as err:
-                logger.info(str(err))
-            remove(torrent)
-        sleep(sleep_time)
+        if len(torrents) > 0:
+            logger.success("{} .torrent files found", len(torrents))
+            for torrent in torrents:
+                try:
+                    host.add_torrent(torrent)
+                except TorrentAlreadyPresentInCollectionException as err:
+                    logger.warning(str(err))
+                remove(torrent)
 
 
 if __name__ == "__main__":
