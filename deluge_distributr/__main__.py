@@ -1,8 +1,9 @@
+from atexit import register as atexit_register
 from os import makedirs, remove
 from os.path import abspath, basename, expandvars
 from pathlib import Path
 from sys import argv, stderr
-from time import sleep
+from time import sleep, time
 
 from click import Choice as CHOICE, INT, Path as PATH, STRING, command, get_app_dir, option
 
@@ -11,6 +12,36 @@ from loguru import logger
 from notifiers.logging import NotificationHandler
 
 from .deluge_host_collection import DelugeHostCollection, TorrentAlreadyPresentInCollectionException
+
+
+start_time = time()
+
+
+def duration_human(seconds):
+    seconds = int(round(seconds))
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    days, hours = divmod(hours, 24)
+    years, days = divmod(days, 365.242199)
+
+    minutes = int(minutes)
+    hours = int(hours)
+    days = int(days)
+    years = int(years)
+
+    duration = []
+    if years > 0:
+        duration.append('%d year' % years + 's' * (years != 1))
+    else:
+        if days > 0:
+            duration.append('%d day' % days + 's' * (days != 1))
+        if hours > 0:
+            duration.append('%d hour' % hours + 's' * (hours != 1))
+        if minutes > 0:
+            duration.append('%d minute' % minutes + 's' * (minutes != 1))
+        if seconds > 0:
+            duration.append('%d second' % seconds + 's' * (seconds != 1))
+    return ' '.join(duration)
 
 
 def resolve_path(ctx,
@@ -96,28 +127,36 @@ def main(config_path, watch_path, host_filter, max_torrents, sleep_time, log_lev
     logger.info('  --slack-username "{}"', slack_username)
     logger.info('  --slack-format "{}"', slack_format)
 
-    while True:
-        logger.debug(f'Sleeping {sleep_time} seconds')
-        sleep(sleep_time)
+    try:
+        while True:
+            logger.debug(f'Sleeping {sleep_time} seconds')
+            sleep(sleep_time)
 
-        host = DelugeHostCollection(
-            config_path=config_path,
-            host_filter=host_filter,
-            max_torrents=max_torrents)
-        torrents = [
-            torrent
-            for torrent in Path(watch_path).rglob('*.torrent')
-            if torrent.is_file()
-        ]
-        if len(torrents) > 0:
-            logger.success("{} .torrent files found", len(torrents))
-            for torrent in torrents:
-                try:
-                    host.add_torrent(torrent)
-                except TorrentAlreadyPresentInCollectionException as err:
-                    logger.warning(str(err))
-                remove(torrent)
+            host = DelugeHostCollection(
+                config_path=config_path,
+                host_filter=host_filter,
+                max_torrents=max_torrents)
+            torrents = [
+                torrent
+                for torrent in Path(watch_path).rglob('*.torrent')
+                if torrent.is_file()
+            ]
+            if len(torrents) > 0:
+                logger.success("{} .torrent files found", len(torrents))
+                for torrent in torrents:
+                    try:
+                        host.add_torrent(torrent)
+                    except TorrentAlreadyPresentInCollectionException as err:
+                        logger.warning(str(err))
+                    remove(torrent)
+    finally:
+        lwt()
+
+
+def lwt():
+    logger.success('{} Exiting after {}', basename(argv[0]), duration_human(time() - start_time))
 
 
 if __name__ == "__main__":
+    atexit_register(lwt)
     main()
