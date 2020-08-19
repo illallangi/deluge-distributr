@@ -14,9 +14,9 @@ setuptools.setup(
     url="https://github.com/illallangi/DelugeDistributr",
     packages=setuptools.find_packages(),
     classifiers=[
-            "Programming Language :: Python :: 3",
-            "License :: OSI Approved :: MIT License",
-            "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
     ],
     python_requires='>=3.6',
     entry_points={
