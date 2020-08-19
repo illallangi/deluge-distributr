@@ -93,6 +93,7 @@ def main(config_path, watch_path, host_filter, max_torrents, sleep_time, log_lev
     logger.info('  --sleep-time {}', sleep_time)
     logger.info('  --log-level "{}"', log_level)
     logger.info('  --slack-webhook "{}"', slack_webhook)
+    logger.info('  --slack-username "{}"', slack_username)
     logger.info('  --slack-format "{}"', slack_format)
 
     while True:
