@@ -60,7 +60,7 @@ def resolve_path(ctx,
                   readable=True,
                   resolve_path=False,
                   allow_dash=False),
-        envvar='DELUGE_WATCH_PATH',
+        envvar='DELUGE_CONFIG_PATH',
         default=get_app_dir('deluge'),
         callback=resolve_path)
 @option('--watch-path',
