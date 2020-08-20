@@ -17,6 +17,33 @@ class DelugeHost(object):
         self.username = username
         self.password = password
 
+    def get_client(self):
+        client = DelugeRPCClient(self.host,
+                                 self.port,
+                                 self.username,
+                                 self.password)
+        try:
+            client.connect()
+        except timeout:
+            logger.error('Timeout connecting to {}', self.display)
+            return None
+        except BrokenPipeError:
+            logger.error('Broken Pipe connecting to {}', self.display)
+            return None
+        except ConnectionAbortedError:
+            logger.error('Connection Aborted connecting to {}', self.display)
+            return None
+        except ConnectionRefusedError:
+            logger.error('Connection Refused connecting to {}', self.display)
+            return None
+        except ConnectionResetError:
+            logger.error('Connection Reset connecting to {}', self.display)
+            return None
+
+        if not client.connected:
+            logger.error('Connection to {} failed', self.display)
+            return None
+
     @property
     def display(self):
         if '_display' not in self.__dict__ or self._display is None:
@@ -27,19 +54,8 @@ class DelugeHost(object):
     @property
     def torrent_hashes(self):
         if '_torrent_hashes' not in self.__dict__ or self._torrent_hashes is None:
-            client = DelugeRPCClient(
-                self.host,
-                self.port,
-                self.username,
-                self.password)
-            try:
-                client.connect()
-            except timeout:
-                logger.error('Timed out connecting to {}', self.display)
-                return None
-
-            if not client.connected:
-                logger.error('Connection to {} failed', self.display)
+            client = self.get_client()
+            if client is None:
                 return None
 
             self._torrent_hashes = [
@@ -62,19 +78,9 @@ class DelugeHost(object):
         if hash in self.torrent_hashes or []:
             raise TorrentAlreadyPresentException(hash)
 
-        client = DelugeRPCClient(
-            self.host,
-            self.port,
-            self.username,
-            self.password)
-        try:
-            client.connect()
-        except timeout:
-            logger.error('Timed out connecting to {}', self.display)
-            return False
-        if not client.connected:
-            logger.error('Connection to {} failed', self.display)
-            return False
+        client = self.get_client()
+        if client is None:
+            return None
 
         with open(torrent, 'rb') as file:
             filedump = encodestring(file.read())
