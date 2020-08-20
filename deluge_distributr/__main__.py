@@ -52,6 +52,7 @@ def resolve_path(ctx,
     return value
 
 
+@logger.catch
 @command()
 @option('--config-path',
         type=PATH(file_okay=False,

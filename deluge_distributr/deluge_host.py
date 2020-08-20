@@ -1,6 +1,7 @@
 from base64 import encodestring
 from hashlib import sha1
 from os.path import basename
+from socket import timeout
 
 from bencoding import bdecode, bencode
 
@@ -23,36 +24,42 @@ class DelugeHost(object):
             logger.debug('Calculated {}', self._display)
         return self._display
 
-    def get_torrent_hashes(self):
-        client = DelugeRPCClient(
-            self.host,
-            self.port,
-            self.username,
-            self.password)
-        client.connect()
-        if not client.connected:
-            logger.error('Connection to {} failed', self.display)
-            return None
-        result = client.call('core.get_torrents_status', {}, [])
-        result = [
-            key.decode("utf-8")
-            for key
-            in result.keys()
-        ]
-        logger.debug('Calculated [{}]', ','.join(result))
-        return result
+    @property
+    def torrent_hashes(self):
+        if '_torrent_hashes' not in self.__dict__ or self._torrent_hashes is None:
+            client = DelugeRPCClient(
+                self.host,
+                self.port,
+                self.username,
+                self.password)
+            try:
+                client.connect()
+            except timeout:
+                logger.error('Timed out connecting to {}', self.display)
+                return None
 
-    def get_torrent_count(self):
-        result = len(self.get_torrent_hashes())
-        logger.debug('Calculated {}', result)
-        return result
+            if not client.connected:
+                logger.error('Connection to {} failed', self.display)
+                return None
+
+            self._torrent_hashes = [
+                key.decode("utf-8")
+                for key
+                in client.call('core.get_torrents_status', {}, []).keys()
+            ]
+
+        return self._torrent_hashes
+
+    @property
+    def torrent_count(self):
+        return None if self.torrent_hashes is None else len(self.torrent_hashes)
 
     def add_torrent(self, torrent):
         with open(torrent, "rb") as file:
             data = bdecode(file.read())
         info = data[b'info']
         hash = sha1(bencode(info)).hexdigest()
-        if hash in self.get_torrent_hashes():
+        if hash in self.torrent_hashes or []:
             raise TorrentAlreadyPresentException(hash)
 
         client = DelugeRPCClient(
@@ -60,10 +67,15 @@ class DelugeHost(object):
             self.port,
             self.username,
             self.password)
-        client.connect()
+        try:
+            client.connect()
+        except timeout:
+            logger.error('Timed out connecting to {}', self.display)
+            return False
         if not client.connected:
             logger.error('Connection to {} failed', self.display)
-            return None
+            return False
+
         with open(torrent, 'rb') as file:
             filedump = encodestring(file.read())
         filename = basename(torrent)
@@ -75,6 +87,8 @@ class DelugeHost(object):
         logger.debug('Returning {}', result.decode("utf-8"))
         if result.decode("utf-8") != hash:
             raise Exception(result.decode("utf-8"))
+        self._torrent_hashes = None
+        return True
 
 
 class TorrentAlreadyPresentException(Exception):

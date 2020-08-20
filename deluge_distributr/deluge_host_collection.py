@@ -59,38 +59,42 @@ class DelugeHostCollection(object):
             logger.debug('Calculated [{}]', ','.join([host.display for host in self._hosts]))
         return self._hosts
 
-    def get_torrent_hashes(self):
-        result = []
-        for host in self.hosts:
-            for hash in host.get_torrent_hashes():
-                if hash in result:
-                    raise DuplicateTorrentInCollectionException(host.display, hash)
-                result.append(hash)
-        logger.debug('Calculated [{}]', ','.join(result))
-        return result
+    @property
+    def torrent_hashes(self):
+        if '_torrent_hashes' not in self.__dict__ or self._torrent_hashes is None or len(self._torrent_hashes) == 0:
+            self._torrent_hashes = []
+            for host in self.hosts:
+                for hash in host.torrent_hashes or []:
+                    if hash in self._torrent_hashes:
+                        raise DuplicateTorrentInCollectionException(host.display, hash)
+                    self._torrent_hashes.append(hash)
+            logger.debug('Calculated [{}]', ','.join(self._torrent_hashes))
+        return self._torrent_hashes
 
-    def get_torrent_count(self):
-        result = len(self.get_torrent_hashes())
-        logger.debug('Calculated {}', result)
-        return result
+    @property
+    def torrent_count(self):
+        return None if self.torrent_hashes is None else len(self.torrent_hashes)
 
     def add_torrent(self, torrent):
         with open(torrent, "rb") as file:
             data = bdecode(file.read())
         info = data[b'info']
         hash = sha1(bencode(info)).hexdigest()
-        if hash in self.get_torrent_hashes():
+        if hash in self.torrent_hashes or []:
             raise TorrentAlreadyPresentInCollectionException(hash)
 
         if len(self.hosts) == 0:
             raise NoDelugeHostsInCollectionException()
 
-        host = min(self.hosts, key=lambda host: host.get_torrent_count())
-        if host.get_torrent_count() >= self.max_torrents:
+        host = min((host for host in self.hosts if host.torrent_count), key=lambda host: host.torrent_count)
+        if host.torrent_count >= self.max_torrents:
             raise AllDelugeHostsInCollectionFullException()
 
-        host.add_torrent(torrent)
-        logger.success('Added {} to {}', torrent, host.display)
+        if host.add_torrent(torrent):
+            logger.success('Added {} to {}', torrent, host.display)
+            self._torrent_hashes = None
+            return True
+        return False
 
 
 class TorrentAlreadyPresentInCollectionException(Exception):
