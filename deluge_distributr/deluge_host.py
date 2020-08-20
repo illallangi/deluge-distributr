@@ -43,6 +43,7 @@ class DelugeHost(object):
         if not client.connected:
             logger.error('Connection to {} failed', self.display)
             return None
+        return client
 
     @property
     def display(self):
