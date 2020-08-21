@@ -1,7 +1,6 @@
 from base64 import encodestring
 from hashlib import sha1
 from os.path import basename
-from socket import timeout
 
 from bencoding import bdecode, bencode
 
@@ -9,69 +8,53 @@ from deluge_client import DelugeRPCClient
 
 from loguru import logger
 
+from .exceptions import DelugeNotConnectedException, TorrentAlreadyPresentException
+
 
 class DelugeHost(object):
-    def __init__(self, host, port, username, password):
+    def __init__(
+            self,
+            host,
+            port,
+            username,
+            password):
         self.host = host
         self.port = port
         self.username = username
         self.password = password
-
-    def get_client(self):
-        client = DelugeRPCClient(self.host,
-                                 self.port,
-                                 self.username,
-                                 self.password)
-        try:
-            client.connect()
-        except timeout:
-            logger.error('Timeout connecting to {}', self.display)
-            return None
-        except BrokenPipeError:
-            logger.error('Broken Pipe connecting to {}', self.display)
-            return None
-        except ConnectionAbortedError:
-            logger.error('Connection Aborted connecting to {}', self.display)
-            return None
-        except ConnectionRefusedError:
-            logger.error('Connection Refused connecting to {}', self.display)
-            return None
-        except ConnectionResetError:
-            logger.error('Connection Reset connecting to {}', self.display)
-            return None
-
-        if not client.connected:
-            logger.error('Connection to {} failed', self.display)
-            return None
-        return client
+        self.client = DelugeRPCClient(
+            self.host,
+            self.port,
+            self.username,
+            self.password)
+        self.client.connect()
+        if not self.client.connected:
+            raise DelugeNotConnectedException()
 
     @property
     def display(self):
-        if '_display' not in self.__dict__ or self._display is None:
-            self._display = f'{self.username}@{self.host}:{self.port}'
-            logger.debug('Calculated {}', self._display)
-        return self._display
+        return f'{self.username}@{self.host}:{self.port}'
 
     @property
     def torrent_hashes(self):
         if '_torrent_hashes' not in self.__dict__ or self._torrent_hashes is None:
-            client = self.get_client()
-            if client is None:
-                return None
+            logger.debug('Getting hashes from {}', self.display)
 
             self._torrent_hashes = [
                 key.decode("utf-8")
                 for key
-                in client.call('core.get_torrents_status', {}, []).keys()
+                in self.client.call('core.get_torrents_status', {}, []).keys()
             ]
 
         return self._torrent_hashes
 
     @property
     def torrent_count(self):
-        return None if self.torrent_hashes is None else len(self.torrent_hashes)
+        return len(self.torrent_hashes)
 
-    def add_torrent(self, torrent):
+    def add_torrent(
+            self,
+            torrent):
         with open(torrent, "rb") as file:
             data = bdecode(file.read())
         info = data[b'info']
@@ -79,14 +62,10 @@ class DelugeHost(object):
         if hash in self.torrent_hashes or []:
             raise TorrentAlreadyPresentException(hash)
 
-        client = self.get_client()
-        if client is None:
-            return None
-
         with open(torrent, 'rb') as file:
             filedump = encodestring(file.read())
         filename = basename(torrent)
-        result = client.call(
+        result = self.client.call(
             'core.add_torrent_file',
             filename,
             filedump,
@@ -96,9 +75,3 @@ class DelugeHost(object):
             raise Exception(result.decode("utf-8"))
         self._torrent_hashes = None
         return True
-
-
-class TorrentAlreadyPresentException(Exception):
-    def __init__(self, hash):
-        self.hash = hash
-        super().__init__(f'Hash {hash} is already present on the host.')

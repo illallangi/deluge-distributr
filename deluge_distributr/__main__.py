@@ -11,7 +11,7 @@ from loguru import logger
 
 from notifiers.logging import NotificationHandler
 
-from .deluge_host_collection import DelugeHostCollection, TorrentAlreadyPresentInCollectionException
+from .deluge_host_collection import AllDelugeHostsInCollectionFullException, DelugeHostCollection, TorrentAlreadyPresentInCollectionException
 
 
 start_time = time()
@@ -133,10 +133,6 @@ def main(config_path, watch_path, host_filter, max_torrents, sleep_time, log_lev
             logger.debug(f'Sleeping {sleep_time} seconds')
             sleep(sleep_time)
 
-            host = DelugeHostCollection(
-                config_path=config_path,
-                host_filter=host_filter,
-                max_torrents=max_torrents)
             torrents = [
                 torrent
                 for torrent in Path(watch_path).rglob('*.torrent')
@@ -144,11 +140,18 @@ def main(config_path, watch_path, host_filter, max_torrents, sleep_time, log_lev
             ]
             if len(torrents) > 0:
                 logger.success("{} .torrent files found", len(torrents))
+                host = DelugeHostCollection(
+                    config_path=config_path,
+                    host_filter=host_filter,
+                    max_torrents=max_torrents)
                 for torrent in torrents:
                     try:
                         host.add_torrent(torrent)
                     except TorrentAlreadyPresentInCollectionException as err:
                         logger.warning(str(err))
+                    except AllDelugeHostsInCollectionFullException as err:
+                        logger.error(str(err))
+                        continue
                     remove(torrent)
     finally:
         lwt()
