@@ -130,16 +130,14 @@ def main(config_path, watch_path, host_filter, max_torrents, sleep_time, log_lev
 
     try:
         while True:
-            logger.debug(f'Sleeping {sleep_time} seconds')
-            sleep(sleep_time)
-
             torrents = [
                 torrent
                 for torrent in Path(watch_path).rglob('*.torrent')
                 if torrent.is_file()
             ]
+
+            logger.info("{} .torrent files found", len(torrents))
             if len(torrents) > 0:
-                logger.success("{} .torrent files found", len(torrents))
                 host = DelugeHostCollection(
                     config_path=config_path,
                     host_filter=host_filter,
@@ -153,6 +151,12 @@ def main(config_path, watch_path, host_filter, max_torrents, sleep_time, log_lev
                         logger.error(str(err))
                         continue
                     remove(torrent)
+
+            if sleep_time == 0:
+                break
+
+            logger.debug(f'Sleeping {sleep_time} seconds')
+            sleep(sleep_time)
     finally:
         lwt()
 
