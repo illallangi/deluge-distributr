@@ -18,15 +18,15 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6',
+    python_requires=">=3.6",
     entry_points={
-        'console_scripts': ['deluge-distributr=deluge_distributr:__main__.main'],
+        "console_scripts": ["deluge-distributr=deluge_distributr:__main__.main"],
     },
     install_requires=[
-        'bencoding',
-        'Click',
-        'deluge-client==1.3.0',
-        'loguru',
-        'notifiers'
-    ]
+        "bencoding",
+        "Click",
+        "deluge-client==1.3.0",
+        "loguru",
+        "notifiers",
+    ],
 )
