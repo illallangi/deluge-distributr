@@ -1,0 +1,91 @@
+---
+name: ci
+
+on:
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - 
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: '0'
+      - 
+        name: Bump version and push tag
+        id: version
+        uses: anothrNick/github-tag-action@1.26.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: false
+          DEFAULT_BUMP: patch
+      -
+        name: Bump version in __version__.py
+        uses: jacobtomlinson/gha-find-replace@master
+        with:
+          find: 'development'
+          replace: ${{ steps.version.outputs.new_tag }}
+          include: "__version__.py"
+      -
+        name: Bump version in deploy.yaml
+        uses: jacobtomlinson/gha-find-replace@master
+        with:
+          find: ${{ github.repository }}:latest
+          replace: ${{ github.repository }}:${{ steps.version.outputs.new_tag }}
+          include: "deploy.yaml"
+      -
+        name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ghcr.io/${{ github.repository }},docker.io/${{ github.repository }}
+          tags: type=semver,pattern={{version}},value=${{ steps.version.outputs.new_tag }}
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      -
+        name: Login to GitHub Container Registry
+        uses: docker/login-action@v1 
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v1 
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      -
+        name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          push: true
+      -
+        name: Sync README with Docker Hub
+        uses: meeDamian/sync-readme@v1.0.6
+        with:
+          user: ${{ secrets.DOCKER_USERNAME }}
+          pass: ${{ secrets.DOCKER_PASSWORD }}
+          description: true
+      -
+        name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.new_tag }}
+          files: deploy.yaml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
