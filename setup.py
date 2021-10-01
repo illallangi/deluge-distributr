@@ -25,7 +25,7 @@ setuptools.setup(
     install_requires=[
         "bencoding",
         "Click",
-        "deluge-client==1.3.0",
+        "deluge-client",
         "loguru",
         "notifiers",
     ],
