@@ -28,7 +28,7 @@ class DelugeHostCollection(object):
 
     @property
     def hostlist(self):
-        return join(self.config_path, "hostlist.conf.1.2")
+        return join(self.config_path, "hostlist.conf")
 
     @property
     def hosts(self):
