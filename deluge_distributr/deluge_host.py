@@ -1,4 +1,4 @@
-from base64 import encodestring
+from base64 import encodebytes
 from hashlib import sha1
 from os.path import basename
 
@@ -53,7 +53,7 @@ class DelugeHost(object):
             raise TorrentAlreadyPresentException(hash)
 
         with open(torrent, "rb") as file:
-            filedump = encodestring(file.read())
+            filedump = encodebytes(file.read())
         filename = basename(torrent)
         result = self.client.call("core.add_torrent_file", filename, filedump, {})
         logger.debug("Returning {}", result.decode("utf-8"))
