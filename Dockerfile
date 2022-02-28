@@ -1,17 +1,28 @@
-FROM docker.io/library/python:3.8.5
+FROM docker.io/library/python:3.10.2
 
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONIOENCODING=UTF-8 \
-    LC_ALL=en_US.UTF-8 \
-    LANG=en_US.UTF-8 \
-    XDG_CONFIG_HOME=/config
+    PYTHONIOENCODING=UTF-8
+
+# install gosu
+RUN \
+  apt-get update \
+  && \
+  apt-get install -y \
+    gosu \
+  && \
+  apt-get clean
 
 WORKDIR /usr/src/app
+
 ADD . /usr/src/app
 
 RUN pip3 install .
 
-ENTRYPOINT ["/usr/local/bin/deluge-distributr"]
+#set entrypoint
+ENTRYPOINT ["./custom-entrypoint"]
+
+# set command
+CMD ["/usr/local/bin/deluge-distributr"]
 
 ARG VCS_REF
 ARG VERSION
