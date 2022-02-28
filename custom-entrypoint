@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+export UMASK_SET=${UMASK_SET:-022}
+export PUID=${PUID:-1000}
+export PGID=${PGID:-1000}
+
+umask "$UMASK_SET" || exit 1
+
+if [[ $( id -u ) -eq 0 ]]; then
+
+  addgroup --gid ${PGID} abc || exit 1
+  useradd --gid ${PGID} --uid ${PUID} abc --create-home || exit 1
+
+  mkdir -p /config/watch || exit 1
+
+  find /config/watch ! -group ${PGID} -exec chown -c ${PUID}.${PGID} {} \; || exit 1
+  find /config/watch ! -user ${PUID} -exec chown -c ${PUID} {} \; || exit 1
+
+  find /config/watch -type d ! -perm 0755 -exec chmod -c 0755 {} \; || exit 1
+  find /config/watch -type f ! -perm 0644 -exec chmod -c 0644 {} \; || exit 1
+
+  gosu abc $0 $* || exit 1
+
+else
+
+  exec $@
+
+fi
