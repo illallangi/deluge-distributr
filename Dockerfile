@@ -1,7 +1,8 @@
 FROM docker.io/library/python:3.10.2
 
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONIOENCODING=UTF-8
+    PYTHONIOENCODING=UTF-8 \
+    XDG_CONFIG_HOME=/config
 
 # install gosu
 RUN \
