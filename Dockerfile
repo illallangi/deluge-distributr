@@ -1,4 +1,5 @@
 FROM ghcr.io/illallangi/toolbx:v0.0.2 as toolbx
+
 FROM docker.io/library/python:3.10.2
 
 ENV PYTHONUNBUFFERED=1 \
@@ -12,9 +13,11 @@ COPY --from=toolbx /usr/local/bin/gosu /usr/local/bin/gosu
 
 WORKDIR /usr/src/app
 
-ADD . /usr/src/app
+COPY . /usr/src/app
 
-RUN pip3 install .
+RUN \
+  python3 -m pip install --no-cache-dir \
+    .
 
 #set entrypoint
 ENTRYPOINT ["./custom-entrypoint"]
