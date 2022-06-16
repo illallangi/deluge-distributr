@@ -1,4 +1,4 @@
-FROM ghcr.io/illallangi/toolbx:v0.0.2 as toolbx
+FROM ghcr.io/illallangi/toolbx:v0.0.3 as toolbx
 
 FROM docker.io/library/python:3.10.5
 
