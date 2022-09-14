@@ -1,4 +1,4 @@
-# DelugeDistributr
+# 🚚 [Deluge Distributr](https://github.com/illallangi/deluge-distributr)
 
 TODO: SET DESCRIPTION
 
