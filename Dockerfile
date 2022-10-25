@@ -1,6 +1,6 @@
 FROM ghcr.io/illallangi/toolbx:v0.0.11 as toolbx
 
-FROM docker.io/library/python:3.10.7
+FROM docker.io/library/python:3.10.8
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONIOENCODING=UTF-8 \
