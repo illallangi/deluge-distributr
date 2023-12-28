@@ -1,6 +1,9 @@
 ---
 jobs:
   pull-request:
+    concurrency:
+      cancel-in-progress: true
+      group: ${{ github.workflow }}-${{ github.ref }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -9,7 +12,7 @@ jobs:
       with:
         pr_assignee: andrewcole
         pr_label: release
-name: Automatic Create Pull Request
+name: Automatically Create Pull Request
 on:
   push:
     branches:
