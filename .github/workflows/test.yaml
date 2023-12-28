@@ -3,7 +3,7 @@ jobs:
   lint-actions:  # https://github.com/reviewdog/action-actionlint
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: reviewdog/action-actionlint@v1
       with:
         fail_on_error: "true"
@@ -12,7 +12,7 @@ jobs:
   lint-dockerfile:  # https://github.com/reviewdog/action-hadolint
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: reviewdog/action-hadolint@v1
       with:
         fail_on_error: "true"
@@ -21,7 +21,7 @@ jobs:
   lint-spelling:  # https://github.com/reviewdog/action-misspell
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: reviewdog/action-misspell@v1
       with:
         exclude: |
@@ -33,7 +33,7 @@ jobs:
   lint-yaml:  # https://github.com/reviewdog/action-yamllint
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: reviewdog/action-yamllint@v1
       with:
         fail_on_error: "true"
@@ -42,15 +42,15 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: "0"
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@v2
+      uses: docker/setup-qemu-action@v3
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+      uses: docker/setup-buildx-action@v3
     - name: Build
-      uses: docker/build-push-action@v3
+      uses: docker/build-push-action@v5
       with:
         cache-from: type=gha
         cache-to: type=gha,mode=max

@@ -1,6 +1,5 @@
-FROM ghcr.io/illallangi/toolbx:v0.0.7 as toolbx
-
-FROM docker.io/library/python:3.10.7
+# main image
+FROM docker.io/library/python:3.12.1
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONIOENCODING=UTF-8 \
@@ -9,7 +8,13 @@ ENV PYTHONUNBUFFERED=1 \
     XDG_CONFIG_HOME=/config
 
 # install gosu
-COPY --from=toolbx /usr/local/bin/gosu /usr/local/bin/gosu
+RUN DEBIAN_FRONTEND=noninteractive \
+  apt-get update \
+  && \
+  apt-get install -y --no-install-recommends \
+    gosu=1.14-1+b6 \
+  && \
+  rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/app
 
