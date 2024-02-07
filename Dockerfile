@@ -1,5 +1,5 @@
 # main image
-FROM docker.io/library/python:3.12.1
+FROM docker.io/library/python:3.13.0a3
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONIOENCODING=UTF-8 \
